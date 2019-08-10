@@ -56,6 +56,7 @@ int __cdecl main(int argc, char* argv[])
 	       " -datatables    Dump data tables. (send tables)\n"
 	       " -packetentities Dump Packet Entities messages.\n"
 	       " -netmessages   Dump net messages that are not one of the above.\n"
+	       " -debug         Prints only test stuff. \n"
 	       "Note: by default everything is dumped out.\n");
 	exit(0);
     }
@@ -89,27 +90,31 @@ int __cdecl main(int argc, char* argv[])
 		} else if (_stricmp(&argv[i][1], "netmessages") == 0) {
 		    g_bDumpNetMessages = true;
 		}
-	    } else {
-		nFileArgument = i;
-	    }
 	}
-    } else {
-	// default is to dump out everything
-	g_bDumpGameEvents = true;
-	g_bSupressFootstepEvents = false;
-	g_bShowExtraPlayerInfoInGameEvents = true;
-	g_bDumpDeaths = true;
-	g_bSupressWarmupDeaths = false;
-	g_bDumpStringTables = true;
-	g_bDumpDataTables = true;
-	g_bDumpPacketEntities = true;
-	g_bDumpNetMessages = true;
+	else
+	{
+	    nFileArgument = i;
+	}
     }
+}
+else
+{
+    // default is to dump out everything
+    g_bDumpGameEvents = true;
+    g_bSupressFootstepEvents = false;
+    g_bShowExtraPlayerInfoInGameEvents = true;
+    g_bDumpDeaths = true;
+    g_bSupressWarmupDeaths = false;
+    g_bDumpStringTables = true;
+    g_bDumpDataTables = true;
+    g_bDumpPacketEntities = true;
+    g_bDumpNetMessages = true;
+}
 
-    if (DemoFileDump.Open(argv[nFileArgument])) {
-	DemoFileDump.DoDump();
-    }
+if (DemoFileDump.Open(argv[nFileArgument])) {
+    DemoFileDump.DoDump();
+}
 
-    return 1;
+return 1;
 }
 

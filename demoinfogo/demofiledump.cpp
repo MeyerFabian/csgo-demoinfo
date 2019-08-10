@@ -59,6 +59,7 @@ extern bool g_bDumpNades;
 
 static bool s_bMatchStartOccured = false;
 static int s_nCurrentTick;
+static float s_nServerTickInterval;
 
 EntityEntry* FindEntity(int nEntity);
 player_info_t* FindPlayerByEntity(int entityID);
@@ -193,7 +194,17 @@ void PrintNetMessage(CDemoFileDump& Demo, const void* parseBuffer, int BufferSiz
 	if (msgType == svc_GameEventList) {
 	    Demo.m_GameEventList.CopyFrom(msg);
 	}
-
+	if (msgType == 8) {
+	    string tick = "tick_interval";
+	    string server_info = msg.DebugString();
+	    size_t found_tick_begin = server_info.find(tick) + (tick.size() + 2);
+	    size_t found_tick_end = server_info.find('\n', found_tick_begin);
+	    if (found_tick_begin != string::npos) {
+		size_t length = found_tick_end - found_tick_begin;
+		string tick_interval = server_info.substr(found_tick_begin, length);
+		s_nServerTickInterval = (float)atof(tick_interval.c_str());
+	    }
+	}
 	Demo.MsgPrintf(msg, BufferSize, "%s", msg.DebugString().c_str());
     }
 }
@@ -326,6 +337,10 @@ bool ShowNadeInfo(const char* pField, int nIndex)
 	int nEntityIndex = pPlayerInfo->entityID + 1;
 	EntityEntry* pEntity = FindEntity(nEntityIndex);
 	if (pEntity) {
+	    PropEntry* pTeamProp = pEntity->FindProp("m_iTeamNum");
+	    if (pTeamProp) {
+		printf(", %s", (pTeamProp->m_pPropValue->m_value.m_int == 2) ? "T" : "CT");
+	    }
 	    PropEntry* pXYProp = pEntity->FindProp("m_vecOrigin");
 	    PropEntry* pZProp = pEntity->FindProp("m_vecOrigin[2]");
 	    if (pXYProp && pZProp) {
@@ -336,11 +351,6 @@ bool ShowNadeInfo(const char* pField, int nIndex)
 	    PropEntry* pAngle1Prop = pEntity->FindProp("m_angEyeAngles[1]");
 	    if (pAngle0Prop && pAngle1Prop) {
 		printf("; setang %f %f 0.0", pAngle0Prop->m_pPropValue->m_value.m_float, pAngle1Prop->m_pPropValue->m_value.m_float);
-	    }
-
-	    PropEntry* pTeamProp = pEntity->FindProp("m_iTeamNum");
-	    if (pTeamProp) {
-		printf(", %s", (pTeamProp->m_pPropValue->m_value.m_int == 2) ? "T" : "CT");
 	    }
 	}
 	return true;
@@ -410,6 +420,10 @@ void HandlePlayerNade(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList:
 	}
     }
     if (weaponName.compare("weapon_flashbang") == 0 || weaponName.compare("weapon_molotov") == 0 || weaponName.compare("weapon_hegrenade") == 0 || weaponName.compare("weapon_smokegrenade") == 0) {
+	size_t time_hours = (size_t)((float)s_nCurrentTick * s_nServerTickInterval) / 3600;
+	size_t time_minutes = ((size_t)((float)s_nCurrentTick * s_nServerTickInterval) / 60) % 60;
+	size_t time_seconds = (size_t)((float)s_nCurrentTick * s_nServerTickInterval) % 60;
+	printf("%dh %dm %ds, ", time_hours, time_minutes, time_seconds);
 	printf("%d, ", s_nCurrentTick);
 	printf("%s, ", weaponName.c_str());
 	ShowNadeInfo("userid", userid);
