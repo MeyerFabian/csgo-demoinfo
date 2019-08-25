@@ -455,17 +455,9 @@ void HandleRoundStart(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList:
 {
     int numKeys = msg.keys().size();
 
-    int timelimit = 155;
-    for (int i = 0; i < numKeys; i++) {
-	const CSVCMsg_GameEventList::key_t& Key = pDescriptor->keys(i);
-	const CSVCMsg_GameEvent::key_t& KeyValue = msg.keys(i);
+    // hardcoded mp_roundtime
 
-	if (Key.name().compare("timelimit") == 0) {
-	    // BUG: Somehow this does not read out the value in the event. We always get back 0, hardcoded to 155 above.
-	    //timelimit = KeyValue.val_byte();
-	    //printf("test %d\n", KeyValue.val_byte());
-	}
-    }
+    int timelimit = 115;
     s_nRoundEndTick = s_nCurrentTick + (int)((float)timelimit / s_nServerTickInterval);
     PrintTime();
     printf(",round_start,,\n");
@@ -475,12 +467,15 @@ void HandleRoundEnd(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
     int numKeys = msg.keys().size();
 
     size_t winner = -1;
+    size_t reason = -1;
     for (int i = 0; i < numKeys; i++) {
 	const CSVCMsg_GameEventList::key_t& Key = pDescriptor->keys(i);
 	const CSVCMsg_GameEvent::key_t& KeyValue = msg.keys(i);
 
 	if (Key.name().compare("winner") == 0) {
 	    winner = KeyValue.val_byte();
+	} else if (Key.name().compare("reason") == 0) {
+	    reason = KeyValue.val_byte();
 	}
     }
     if (winner == 2) {
@@ -488,9 +483,12 @@ void HandleRoundEnd(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
     } else {
 	s_nTeamBScore += 1;
     }
-    PrintTime();
-    printf("Score: %d : %d,", s_nTeamAScore, s_nTeamBScore);
-    printf("round_end,,\n");
+    // IF NOT A DRAW
+    if (reason != 10) {
+	PrintTime();
+	printf("Score: %d : %d,", s_nTeamAScore, s_nTeamBScore);
+	printf("round_end,,\n");
+    }
 }
 void HandlePlayerDeath(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
 {
@@ -536,6 +534,10 @@ void ParseGameEvent(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
 	if (!(pDescriptor->name().compare("player_footstep") == 0 && g_bSupressFootstepEvents)) {
 	    if (!HandlePlayerConnectDisconnectEvents(msg, pDescriptor)) {
 		if (pDescriptor->name().compare("round_announce_match_start") == 0) {
+		    PrintTime();
+		    printf("match_start,,\n");
+		    s_nTeamAScore = 0;
+		    s_nTeamBScore = 0;
 		    s_bMatchStartOccured = true;
 		}
 
@@ -546,7 +548,7 @@ void ParseGameEvent(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
 		if (pDescriptor->name().compare("weapon_fire") == 0 && g_bDumpNades) {
 		    HandlePlayerNade(msg, pDescriptor);
 		}
-		if (pDescriptor->name().compare("round_start") == 0 && g_bRoundInfo) {
+		if (pDescriptor->name().compare("round_freeze_end") == 0 && g_bRoundInfo) {
 		    HandleRoundStart(msg, pDescriptor);
 		}
 
