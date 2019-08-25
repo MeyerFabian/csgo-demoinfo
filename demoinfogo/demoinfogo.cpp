@@ -35,6 +35,7 @@ bool g_bDumpDataTables = false;
 bool g_bDumpPacketEntities = false;
 bool g_bDumpNetMessages = false;
 bool g_bDumpNades = false;
+bool g_bRoundInfo = false;
 
 int __cdecl main(int argc, char* argv[])
 {
@@ -50,6 +51,7 @@ int __cdecl main(int argc, char* argv[])
 	       "                Should be after -gameevents.\n"
 	       " -deathscsv     Dump out player death info in CSV form.\n"
 	       " -nades         Dump out nades info in CSV form.\n"
+	       " -roundinfo     Dump out round info in CSV form. After -nades.\n"
 	       " -nowarmup      Skip deaths during warm up when dumping player deaths.\n"
 	       "                Should be after -deaths.\n"
 	       " -stringtables  Dump string tables.\n"
@@ -76,6 +78,8 @@ int __cdecl main(int argc, char* argv[])
 		    g_bShowExtraPlayerInfoInGameEvents = true;
 		} else if (_stricmp(&argv[i][1], "nades") == 0) {
 		    g_bDumpNades = true;
+		} else if (_stricmp(&argv[i][1], "roundinfo") == 0) {
+		    g_bRoundInfo = true;
 		} else if (_stricmp(&argv[i][1], "deathscsv") == 0) {
 		    g_bDumpDeaths = true;
 		    g_bSupressWarmupDeaths = false;
@@ -90,31 +94,33 @@ int __cdecl main(int argc, char* argv[])
 		} else if (_stricmp(&argv[i][1], "netmessages") == 0) {
 		    g_bDumpNetMessages = true;
 		}
+	    } else {
+		nFileArgument = i;
+	    }
 	}
-	else
-	{
-	    nFileArgument = i;
-	}
+    } else {
+	// default is to dump out everything
+	g_bDumpGameEvents = true;
+	g_bSupressFootstepEvents = false;
+	g_bShowExtraPlayerInfoInGameEvents = true;
+	g_bDumpDeaths = true;
+	g_bSupressWarmupDeaths = false;
+	g_bDumpStringTables = true;
+	g_bDumpDataTables = true;
+	g_bDumpPacketEntities = true;
+	g_bDumpNetMessages = true;
     }
-}
-else
-{
-    // default is to dump out everything
-    g_bDumpGameEvents = true;
-    g_bSupressFootstepEvents = false;
-    g_bShowExtraPlayerInfoInGameEvents = true;
-    g_bDumpDeaths = true;
-    g_bSupressWarmupDeaths = false;
-    g_bDumpStringTables = true;
-    g_bDumpDataTables = true;
-    g_bDumpPacketEntities = true;
-    g_bDumpNetMessages = true;
-}
 
-if (DemoFileDump.Open(argv[nFileArgument])) {
-    DemoFileDump.DoDump();
-}
+    if (g_bRoundInfo) {
+	printf("round_time,");
+    }
+    if (g_bDumpNades) {
+	printf("time,tick,nade,player,side,console_cmd\n");
+    }
+    if (DemoFileDump.Open(argv[nFileArgument])) {
+	DemoFileDump.DoDump();
+    }
 
-return 1;
+    return 1;
 }
 

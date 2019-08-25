@@ -56,10 +56,15 @@ extern bool g_bDumpDataTables;
 extern bool g_bDumpPacketEntities;
 extern bool g_bDumpNetMessages;
 extern bool g_bDumpNades;
+extern bool g_bRoundInfo;
 
 static bool s_bMatchStartOccured = false;
 static int s_nCurrentTick;
 static float s_nServerTickInterval;
+
+static int s_nRoundEndTick;
+static int s_nTeamAScore = 0;
+static int s_nTeamBScore = 0;
 
 EntityEntry* FindEntity(int nEntity);
 player_info_t* FindPlayerByEntity(int entityID);
@@ -339,12 +344,12 @@ bool ShowNadeInfo(const char* pField, int nIndex)
 	if (pEntity) {
 	    PropEntry* pTeamProp = pEntity->FindProp("m_iTeamNum");
 	    if (pTeamProp) {
-		printf(", %s", (pTeamProp->m_pPropValue->m_value.m_int == 2) ? "T" : "CT");
+		printf(",%s", (pTeamProp->m_pPropValue->m_value.m_int == 2) ? "T" : "CT");
 	    }
 	    PropEntry* pXYProp = pEntity->FindProp("m_vecOrigin");
 	    PropEntry* pZProp = pEntity->FindProp("m_vecOrigin[2]");
 	    if (pXYProp && pZProp) {
-		printf(", setpos %f %f %f", pXYProp->m_pPropValue->m_value.m_vector.x, pXYProp->m_pPropValue->m_value.m_vector.y, pZProp->m_pPropValue->m_value.m_float);
+		printf(",setpos %f %f %f", pXYProp->m_pPropValue->m_value.m_vector.x, pXYProp->m_pPropValue->m_value.m_vector.y, pZProp->m_pPropValue->m_value.m_float);
 	    }
 
 	    PropEntry* pAngle0Prop = pEntity->FindProp("m_angEyeAngles[0]");
@@ -403,6 +408,26 @@ bool ShowPlayerInfo(const char* pField, int nIndex, bool bShowDetails = true, bo
     }
     return false;
 }
+void PrintTime()
+{
+
+    size_t ticks_round_end;
+    if (s_nCurrentTick > s_nRoundEndTick) {
+	printf("-");
+	ticks_round_end = s_nCurrentTick - s_nRoundEndTick;
+    } else {
+	ticks_round_end = s_nRoundEndTick - s_nCurrentTick;
+    }
+    size_t timer_to_round_end_mins = ((size_t)((float)ticks_round_end * s_nServerTickInterval) / 60) % 60;
+    size_t timer_to_round_end_secs = (size_t)((float)ticks_round_end * s_nServerTickInterval) % 60;
+    printf("%dm %ds,", timer_to_round_end_mins, timer_to_round_end_secs);
+
+    size_t time_hours = (size_t)((float)s_nCurrentTick * s_nServerTickInterval) / 3600;
+    size_t time_minutes = ((size_t)((float)s_nCurrentTick * s_nServerTickInterval) / 60) % 60;
+    size_t time_seconds = (size_t)((float)s_nCurrentTick * s_nServerTickInterval) % 60;
+    printf("%dh %dm %ds,", time_hours, time_minutes, time_seconds);
+    printf("%d,", s_nCurrentTick);
+}
 void HandlePlayerNade(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
 {
     int numKeys = msg.keys().size();
@@ -420,15 +445,52 @@ void HandlePlayerNade(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList:
 	}
     }
     if (weaponName.compare("weapon_flashbang") == 0 || weaponName.compare("weapon_molotov") == 0 || weaponName.compare("weapon_hegrenade") == 0 || weaponName.compare("weapon_smokegrenade") == 0) {
-	size_t time_hours = (size_t)((float)s_nCurrentTick * s_nServerTickInterval) / 3600;
-	size_t time_minutes = ((size_t)((float)s_nCurrentTick * s_nServerTickInterval) / 60) % 60;
-	size_t time_seconds = (size_t)((float)s_nCurrentTick * s_nServerTickInterval) % 60;
-	printf("%dh %dm %ds, ", time_hours, time_minutes, time_seconds);
-	printf("%d, ", s_nCurrentTick);
-	printf("%s, ", weaponName.c_str());
+	PrintTime();
+	printf("%s,", weaponName.c_str());
 	ShowNadeInfo("userid", userid);
 	printf("\n");
     }
+}
+void HandleRoundStart(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
+{
+    int numKeys = msg.keys().size();
+
+    int timelimit = 155;
+    for (int i = 0; i < numKeys; i++) {
+	const CSVCMsg_GameEventList::key_t& Key = pDescriptor->keys(i);
+	const CSVCMsg_GameEvent::key_t& KeyValue = msg.keys(i);
+
+	if (Key.name().compare("timelimit") == 0) {
+	    // BUG: Somehow this does not read out the value in the event. We always get back 0, hardcoded to 155 above.
+	    //timelimit = KeyValue.val_byte();
+	    //printf("test %d\n", KeyValue.val_byte());
+	}
+    }
+    s_nRoundEndTick = s_nCurrentTick + (int)((float)timelimit / s_nServerTickInterval);
+    PrintTime();
+    printf(",round_start\n");
+}
+void HandleRoundEnd(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
+{
+    int numKeys = msg.keys().size();
+
+    size_t winner = -1;
+    for (int i = 0; i < numKeys; i++) {
+	const CSVCMsg_GameEventList::key_t& Key = pDescriptor->keys(i);
+	const CSVCMsg_GameEvent::key_t& KeyValue = msg.keys(i);
+
+	if (Key.name().compare("winner") == 0) {
+	    winner = KeyValue.val_byte();
+	}
+    }
+    if (winner == 2) {
+	s_nTeamAScore += 1;
+    } else {
+	s_nTeamBScore += 1;
+    }
+    PrintTime();
+    printf("Score: %d : %d,", s_nTeamAScore, s_nTeamBScore);
+    printf("round_end\n");
 }
 void HandlePlayerDeath(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
 {
@@ -483,6 +545,13 @@ void ParseGameEvent(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
 		}
 		if (pDescriptor->name().compare("weapon_fire") == 0 && g_bDumpNades) {
 		    HandlePlayerNade(msg, pDescriptor);
+		}
+		if (pDescriptor->name().compare("round_start") == 0 && g_bRoundInfo) {
+		    HandleRoundStart(msg, pDescriptor);
+		}
+
+		if (pDescriptor->name().compare("round_end") == 0 && g_bRoundInfo) {
+		    HandleRoundEnd(msg, pDescriptor);
 		}
 
 		if (g_bDumpGameEvents) {
