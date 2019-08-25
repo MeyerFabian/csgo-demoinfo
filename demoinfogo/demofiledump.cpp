@@ -468,7 +468,7 @@ void HandleRoundStart(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList:
     }
     s_nRoundEndTick = s_nCurrentTick + (int)((float)timelimit / s_nServerTickInterval);
     PrintTime();
-    printf(",round_start\n");
+    printf(",round_start,,\n");
 }
 void HandleRoundEnd(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
 {
@@ -490,7 +490,7 @@ void HandleRoundEnd(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
     }
     PrintTime();
     printf("Score: %d : %d,", s_nTeamAScore, s_nTeamBScore);
-    printf("round_end\n");
+    printf("round_end,,\n");
 }
 void HandlePlayerDeath(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
 {
