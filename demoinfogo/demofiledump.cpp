@@ -478,13 +478,15 @@ void HandleRoundEnd(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
 	    reason = KeyValue.val_byte();
 	}
     }
-    if (winner == 2) {
-	s_nTeamAScore += 1;
-    } else {
-	s_nTeamBScore += 1;
-    }
     // IF NOT A DRAW
     if (reason != 10) {
+
+	if (winner == 2) {
+	    s_nTeamAScore += 1;
+	} else {
+	    s_nTeamBScore += 1;
+	}
+
 	PrintTime();
 	printf("Score: %d : %d,", s_nTeamAScore, s_nTeamBScore);
 	printf("round_end,,\n");
@@ -534,10 +536,12 @@ void ParseGameEvent(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
 	if (!(pDescriptor->name().compare("player_footstep") == 0 && g_bSupressFootstepEvents)) {
 	    if (!HandlePlayerConnectDisconnectEvents(msg, pDescriptor)) {
 		if (pDescriptor->name().compare("round_announce_match_start") == 0) {
-		    PrintTime();
-		    printf("match_start,,,\n");
-		    s_nTeamAScore = 0;
-		    s_nTeamBScore = 0;
+		    if (g_bRoundInfo) {
+			PrintTime();
+			printf("match_start,,,\n");
+			s_nTeamAScore = 0;
+			s_nTeamBScore = 0;
+		    }
 		    s_bMatchStartOccured = true;
 		}
 
