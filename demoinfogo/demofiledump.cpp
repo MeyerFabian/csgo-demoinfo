@@ -535,7 +535,7 @@ void ParseGameEvent(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
 	    if (!HandlePlayerConnectDisconnectEvents(msg, pDescriptor)) {
 		if (pDescriptor->name().compare("round_announce_match_start") == 0) {
 		    PrintTime();
-		    printf("match_start,,\n");
+		    printf("match_start,,,\n");
 		    s_nTeamAScore = 0;
 		    s_nTeamBScore = 0;
 		    s_bMatchStartOccured = true;
