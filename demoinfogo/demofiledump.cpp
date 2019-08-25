@@ -59,10 +59,11 @@ extern bool g_bDumpNades;
 extern bool g_bRoundInfo;
 
 static bool s_bMatchStartOccured = false;
-static int s_nCurrentTick;
+static int s_nRoundCounterLastPhaseEnd = 0;
+static int s_nCurrentTick = 0;
 static float s_nServerTickInterval;
 
-static int s_nRoundEndTick;
+static int s_nRoundEndTick = 0;
 static int s_nTeamAScore = 0;
 static int s_nTeamBScore = 0;
 
@@ -528,6 +529,37 @@ void HandlePlayerDeath(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList
     }
     printf("\n");
 }
+void HandlePhaseEnd()
+{
+    size_t total_rounds = s_nTeamAScore + s_nTeamBScore;
+    // Matchmaking medic sometimes sends the phase end event so we check against score if it actually is a change.
+    // If a matchmaking medic happens and we already switched sides, we also check if we already did a phase end for this amount of rounds.
+    // This is an ugly fix and might break.
+    if (total_rounds != s_nRoundCounterLastPhaseEnd) {
+	if (total_rounds == 15) {
+	    // Side switch regular time
+	    std::swap(s_nTeamAScore, s_nTeamBScore);
+	    s_nRoundCounterLastPhaseEnd = total_rounds;
+	    PrintTime();
+	    printf(",half_time,,\n");
+	} else if (total_rounds >= 30) {
+	    // overtime
+	    size_t total_rounds_overtime = total_rounds - 30;
+	    if (total_rounds_overtime % 3 == 0) {
+		std::swap(s_nTeamAScore, s_nTeamBScore);
+		s_nRoundCounterLastPhaseEnd = total_rounds;
+		PrintTime();
+		printf(",");
+		if (total_rounds_overtime % 6 == 0) {
+		    printf("overtime");
+		} else {
+		    printf("overtime_halftime");
+		}
+		printf(",,\n");
+	    }
+	}
+    }
+}
 
 void ParseGameEvent(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::descriptor_t* pDescriptor)
 {
@@ -535,10 +567,13 @@ void ParseGameEvent(const CSVCMsg_GameEvent& msg, const CSVCMsg_GameEventList::d
     if (pDescriptor) {
 	if (!(pDescriptor->name().compare("player_footstep") == 0 && g_bSupressFootstepEvents)) {
 	    if (!HandlePlayerConnectDisconnectEvents(msg, pDescriptor)) {
+		if (pDescriptor->name().compare("announce_phase_end") == 0) {
+		    HandlePhaseEnd();
+		}
 		if (pDescriptor->name().compare("round_announce_match_start") == 0) {
 		    if (g_bRoundInfo) {
 			PrintTime();
-			printf("match_start,,,\n");
+			printf(",match_start,,\n");
 			s_nTeamAScore = 0;
 			s_nTeamBScore = 0;
 		    }
