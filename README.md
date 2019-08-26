@@ -23,3 +23,14 @@ This takes some time as demoinfogo is not exactly programmed for speed or high u
   * **On its own**: This can be useful, just because it puts you of the context of the game. Now you only concentrate on the nade thrown. I found that you tend to think more about "trivial" nades like anti-aggression flashes. E.g. i saw frozen on inferno t-side bounce an anti-agression flash from false-mid to mid to counter early ct mid aggression. Such a nade in a stream or demo is so trivial that you basically overlook it, especially if there was no aggression from the cts in the first place.
 
 You can open up the csv file with excel, openoffice calc or any other program that creates simple tables.
+
+### FAQ:
+
+  * **Does it recognize jump/walk/run throws?** No, in most cases you will find out pretty quickly if its one of those.
+  * **Does this replace/speed up the demo viewer?** No. You may save on some rewinds if you note down the time of for instance an execute. You can go into the csv-file and see all nades thrown at that time and directly hop into game and cycle through the nades thrown at that time.
+  * **Why are demos slow?** My guess: Demos are event-based and don't store an intermediate match state. This means if you rewind the demo viewer, it needs to go through the whole demo again. This is also why rewinding at the start of the game doesn't take as much time as later in the game. The demo viewer could generate intermediate state probably and delete if you stop watching the demo but it simply doesn't do it.
+  * **Do you plan on extending on this?** Only small bug fixes else i would rewrite the whole thing.
+
+### Problems:
+  * **Score might be displayed wrongly:** Demos and demoinfogo are event-based. Some tournament organizers cut off the event round_announce_match_start which officially starts the match and resets score. It also might not recognize if a round that is being played is not 'live' and ends but doesn't contributes to the score. The Example demo has matchmaking medic (round 5) and everything is displayed right. Luckily, the demo ends the round in question with a draw which i can recognize. So be aware that there could be more cases where it occurs.
+  * **Round time is hardcoded:** afaik tournament and matchmaking round times are synchronized, so should not make a difference. Somehow the timelimit always returned 0. So i hardcoded that a round takes 115s beginning with the end of freeze time (so timeouts should work as well).
