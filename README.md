@@ -1,4 +1,4 @@
-# csgo-demoinfo
+# csgo-demoinfo nade extractor
 Rewrote [demoinfogo](https://github.com/ValveSoftware/csgo-demoinfo) to extract all nades thrown in a demo into a csv format: [Example](https://github.com/MeyerFabian/csgo-demoinfo/blob/master/nades-starladder-berlin-2019-mouse-vs-avangar-inferno.csv) (mouz-vs-avangar).
 
 The demo viewer can be sometimes tedious to work with i rewrote demoinfogo a little bit. Demoinfogo parses the whole demo event-by-event and can output pretty much everything: Footsteps, Nades, Death, Damage etc.
